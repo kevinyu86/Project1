@@ -1,0 +1,61 @@
+---
+title: "Project1"
+format: html
+editor: visual
+---
+
+## Data Processing
+
+### First Steps
+
+Read in data set
+
+```{r}
+library(tidyverse)
+library(tidyr)
+dat <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", col_names = TRUE)
+```
+
+1. Select columns: Area_name, STCOU, and any column ends in "D"
+```{r}
+selected_dat <- dat |> 
+  select(Area_name, STCOU, ends_with("D")) |>
+  rename("area_name" = "Area_name")
+```
+
+2. Convert the data into long format 
+```{r}
+long_dat <- selected_dat |>
+  pivot_longer(cols = 3:12,
+               names_to = "enrollment",
+               values_to = "number")
+```
+
+3. Parse enrollment into two new columns
+```{r}
+parse_dat <- long_dat |>
+  separate_wider_position(enrollment, c(measurement = 3, 4, year = 2, 1))|>
+  mutate(year = as.numeric(year) + 1900)
+```
+
+4. create non-county data and county data
+```{r}
+county_dat <- parse_dat |>
+  filter(grepl(pattern = ", \\w\\w", area_name)) 
+class(county_dat) <- c("county", class(county_dat))
+
+non_county_dat <- parse_dat |>
+  filter(!grepl(pattern = ", \\w\\w", area_name)) 
+class(non_county_dat) <- c("state", class(non_county_dat))
+```
+
+5.
+```{r}
+```
+
+6.
+```{r}
+```
+
+
+
