@@ -49,13 +49,125 @@ non_county_dat <- parse_dat |>
 class(non_county_dat) <- c("state", class(non_county_dat))
 ```
 
-5.
+5. Create new variable for county data
 ```{r}
+final_county_dat <- county_dat |>
+  mutate(state = substr(area_name, nchar(area_name)-1, nchar(area_name)))
 ```
 
-6.
+6. Add division information to non-county data
 ```{r}
+final_non_county_dat <- non_county_dat |>
+  mutate(division = case_when(
+                        area_name %in% c("CONNECTICUT", "MAINE", "MASSACHUSETTS", "NEW HAMPSHIRE", "RHODE ISLAND", "VERMONT") ~ "Division 1",
+                        area_name %in% c('NEW JERSEY', 'NEW YORK', 'PENNSYLVANIA') ~ "Division 2",
+                        area_name %in% c('ILLINOIS', 'INDIANA', 'MICHIGAN', 'OHIO', 'WISCONSIN') ~ "Division 3",
+                        area_name %in% c('IOWA', 'KANSAS', 'MINNESOTA', 'MISSOURI', 'NEBRASKA', 'NORTH DAKOTA', 'SOUTH DAKOTA') ~ "Division 4",
+                        area_name %in% c('DELAWARE', 'FLORIDA', 'GEORGIA', 'MARYLAND', 'NORTH CAROLINA', 'SOUTH CAROLINA', 'VIRGINIA', 'DISTRICT OF COLUMBIA', 'District of Columbia', 'WEST VIRGINIA') ~ "Division 5",
+                        area_name %in% c('ALABAMA', 'KENTUCKY', 'MISSISSIPPI', 'TENNESSEE') ~ "Division 6",
+                        area_name %in% c('ARKANSAS', 'LOUISIANA', 'OKLAHOMA', 'TEXAS') ~ "Division 7",
+                        area_name %in% c('ARIZONA', 'COLORADO', 'IDAHO', 'MONTANA', 'NEVADA', 'NEW MEXICO', 'UTAH', 'WYOMING') ~ "Division 8",
+                        area_name %in% c('ALASKA', 'CALIFORNIA', 'HAWAII', 'OREGON', 'WASHINGTON') ~ "Division 9",
+                        area_name == "UNITED STATES" ~ "ERROR",
+ ) 
+) 
 ```
 
+Then, I will write functions to do above pieces and call it all
 
+Function does steps 1 & 2
+```{r}
+function_for_step_1_2 <- function(dat, default_var_name = "number") {
+  result_from_step2 <- dat |> 
+    select(Area_name, STCOU, ends_with("D")) |>
+    rename("area_name" = "Area_name") |>
+    pivot_longer(cols = 3:12,
+               names_to = "enrollment",
+               values_to = default_var_name)
+}
+```
 
+Function for step 3
+```{r}
+function_for_step_3 <- function(result_from_step2) {
+  result_from_step3 <- result_from_step2 |>
+    separate_wider_position(enrollment, c(measurement = 3, 4, year = 2, 1))|>
+    mutate(year = as.numeric(year) + 1900)
+}
+```
+
+Function for step 5
+```{r}
+function_for_step_5 <- function(county_dat){
+  county_dat |>
+    mutate(state = substr(area_name, nchar(area_name)-1,
+                          nchar(area_name)))
+}
+```
+
+Function for step 6
+```{r}
+function_for_step_6 <- function(non_county_dat){
+  non_county_dat |>
+    mutate(division = case_when(
+                        area_name %in% c("CONNECTICUT", "MAINE", "MASSACHUSETTS", "NEW HAMPSHIRE", "RHODE ISLAND", "VERMONT") ~ "Division 1",
+                        area_name %in% c('NEW JERSEY', 'NEW YORK', 'PENNSYLVANIA') ~ "Division 2",
+                        area_name %in% c('ILLINOIS', 'INDIANA', 'MICHIGAN', 'OHIO', 'WISCONSIN') ~ "Division 3",
+                        area_name %in% c('IOWA', 'KANSAS', 'MINNESOTA', 'MISSOURI', 'NEBRASKA', 'NORTH DAKOTA', 'SOUTH DAKOTA') ~ "Division 4",
+                        area_name %in% c('DELAWARE', 'FLORIDA', 'GEORGIA', 'MARYLAND', 'NORTH CAROLINA', 'SOUTH CAROLINA', 'VIRGINIA', 'DISTRICT OF COLUMBIA', 'District of Columbia', 'WEST VIRGINIA') ~ "Division 5",
+                        area_name %in% c('ALABAMA', 'KENTUCKY', 'MISSISSIPPI', 'TENNESSEE') ~ "Division 6",
+                        area_name %in% c('ARKANSAS', 'LOUISIANA', 'OKLAHOMA', 'TEXAS') ~ "Division 7",
+                        area_name %in% c('ARIZONA', 'COLORADO', 'IDAHO', 'MONTANA', 'NEVADA', 'NEW MEXICO', 'UTAH', 'WYOMING') ~ "Division 8",
+                        area_name %in% c('ALASKA', 'CALIFORNIA', 'HAWAII', 'OREGON', 'WASHINGTON') ~ "Division 9",
+                        area_name == "UNITED STATES" ~ "ERROR",
+ ) 
+) 
+}
+```
+
+Function for steps 4, 5, 6
+```{r}
+function_for_steps4_5_6 <- function(result_from_step3){
+  county_dat <- result_from_step3 |>
+    filter(grepl(pattern = ", \\w\\w", area_name)) |>
+    function_for_step_5()
+  class(county_dat) <- c("county", class(county_dat))
+  
+  non_county_dat <- result_from_step3 |>
+    filter(!grepl(pattern = ", \\w\\w", area_name)) |>
+    function_for_step_6()
+  class(non_county_dat) <- c("state", class(non_county_dat))
+  return(list(county_dat, non_county_dat))
+}
+```
+
+Create a wrapper function
+```{r}
+my_wrapper <- function(url, default_var_name = "number"){
+  result <- read_csv(url, col_names = TRUE) |>
+    function_for_step_1_2(default_var_name = "number") |>
+    function_for_step_3() |>
+    function_for_steps4_5_6()
+return(result)
+}
+```
+
+Then, we call the wrapper function twice to read in and parse two data sets.
+```{r}
+dat1 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", default_var_name)
+
+dat2 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv", default_var_name)
+```
+Then, we write a combine data set function
+```{r}
+my_combine <- function(x, y){
+  county_dat <- bind_rows(x[1], y[1])
+  non_county_dat <- bind_rows(x[2], y[2])
+  return(list(county_dat, non_county_dat))
+}
+```
+
+Then, we call the combine funciton to combine the reuslts from two data sets.
+```{r}
+Final_dat <- my_combine(x=dat1, y=dat2)
+```
