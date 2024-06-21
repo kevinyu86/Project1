@@ -166,13 +166,6 @@ return(result)
 }
 ```
 
-### Then, we call the wrapper function twice to read in and parse two data sets.
-
-```{r}
-dat1 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", default_var_name)
-
-dat2 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv", default_var_name)
-```
 
 ### Then, we write a combine function to combine the reuslts from two data sets.
 
@@ -182,12 +175,11 @@ my_combine <- function(x, y){
   non_county_dat <- bind_rows(x[2], y[2])
   return(list(county_dat, non_county_dat))
 }
-
-Final_dat <- my_combine(x=dat1, y=dat2)
 ```
 
 ## Data Sumarizing
 
+### Firstly, we write a function to plot state data.
 
 ```{r}
 plot.state <- function(df, var_name = "number"){
@@ -204,6 +196,7 @@ plot.state <- function(df, var_name = "number"){
 
 ```
 
+### Then, we write a function to plot county data.
 
 ```{r}
 plot.county <- function(df, Interest_state = "NC", var_name = "number", group = "Top", n = 5){
@@ -233,6 +226,96 @@ plot.county <- function(df, Interest_state = "NC", var_name = "number", group = 
 
 ```
 
-```{r}
+## Put it Together
 
+### Firstly, we call the wrapper function twice to read in and parse two data sets.
+
+```{r}
+dat1 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", default_var_name)
+
+dat2 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv", default_var_name)
 ```
+
+### Then, we call the combining function to put two data sets into one object
+
+```{r}
+Final_dat <- my_combine(x=dat1, y=dat2)
+```
+
+### Use the plot function on the state data frame.
+
+```{r}
+plot.state(df = Final_dat[[2]], var_name = "number")
+```
+### Use the plot function on the county data frame
+
+Once specifying the state to be “NC”, the group being the top, the number looked at being 20
+
+```{r}
+plot.county(df=Final_dat[[1]], Interest_state = "NC", var_name = "number", group = "Top", n = 20)
+```
+Once specifying the state to be “SC”, the group being the bottom, the number looked at being 7
+
+```{r}
+plot.county(df=Final_dat[[1]], Interest_state = "SC", var_name = "number", group = "Bottom", n = 7)
+```
+Once without specifying anything (defaults used)
+
+```{r}
+plot.county(df=Final_dat[[1]])
+```
+Once specifying the state to be “PA”, the group being the top, the number looked at being 8
+
+```{r}
+plot.county(df=Final_dat[[1]], Interest_state = "PA", var_name = "number", group = "Top", n = 8)
+```
+
+### Lastly, read in another couple similar data sets and apply our functions!
+
+```{r}
+dat3 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01a.csv", default_var_name)
+
+dat4 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01b.csv", default_var_name)
+
+dat5 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01c.csv", default_var_name)
+
+dat6 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01d.csv", default_var_name)
+```
+
+### Then, we call the combining function to put above four data sets into one object
+
+```{r}
+dat3_4 <- my_combine(x=dat3, y=dat4)
+dat3_4_5 <- my_combine(x=dat3_4, y=dat5)
+Final_dat2 <- my_combine(x=dat3_4_5, y=dat6)
+```
+
+### Use the plot function on the state data frame.
+
+```{r}
+plot.state(df = Final_dat2[[2]], var_name = "number")
+```
+
+### Use the plot function on the county data frame
+
+Once specifying the state to be “CA”, the group being the top, the number looked at being 15
+
+```{r}
+plot.county(df=Final_dat2[[1]], Interest_state = "CA", var_name = "number", group = "Top", n = 15)
+```
+Once specifying the state to be “TX”, the group being the top, the number looked at being 4
+
+```{r}
+plot.county(df=Final_dat2[[1]], Interest_state = "TX", var_name = "number", group = "Top", n = 4)
+```
+Once without specifying anything (defaults used)
+
+```{r}
+plot.county(df=Final_dat2[[1]])
+```
+Once specifying the state to be “NY”, the group being the top, the number looked at being 10
+
+```{r}
+plot.county(df=Final_dat2[[1]], Interest_state = "NY", var_name = "number", group = "Top", n = 10)
+```
+
