@@ -8,6 +8,8 @@ editor: visual
 
 ### First Steps
 
+In this part, I will read in and parse data step and step.
+
 Read in data set
 
 ```{r}
@@ -16,14 +18,16 @@ library(tidyr)
 dat <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", col_names = TRUE)
 ```
 
-1. Select columns: Area_name, STCOU, and any column ends in "D"
+1.  Select columns: Area_name, STCOU, and any column ends in "D"
+
 ```{r}
 selected_dat <- dat |> 
   select(Area_name, STCOU, ends_with("D")) |>
   rename("area_name" = "Area_name")
 ```
 
-2. Convert the data into long format 
+2.  Convert the data into long format
+
 ```{r}
 long_dat <- selected_dat |>
   pivot_longer(cols = 3:12,
@@ -31,14 +35,16 @@ long_dat <- selected_dat |>
                values_to = "number")
 ```
 
-3. Parse enrollment into two new columns
+3.  Parse enrollment into two new columns
+
 ```{r}
 parse_dat <- long_dat |>
   separate_wider_position(enrollment, c(measurement = 3, 4, year = 2, 1))|>
-  mutate(year = as.numeric(year) + 1900)
+  mutate(year = ifelse(as.numeric(year) < 10, as.numeric(year) + 2000, as.numeric(year) + 1900))
 ```
 
-4. create non-county data and county data
+4.  create non-county data and county data
+
 ```{r}
 county_dat <- parse_dat |>
   filter(grepl(pattern = ", \\w\\w", area_name)) 
@@ -49,13 +55,15 @@ non_county_dat <- parse_dat |>
 class(non_county_dat) <- c("state", class(non_county_dat))
 ```
 
-5. Create new variable for county data
+5.  Create new variable for county data
+
 ```{r}
 final_county_dat <- county_dat |>
   mutate(state = substr(area_name, nchar(area_name)-1, nchar(area_name)))
 ```
 
-6. Add division information to non-county data
+6.  Add division information to non-county data
+
 ```{r}
 final_non_county_dat <- non_county_dat |>
   mutate(division = case_when(
@@ -73,9 +81,10 @@ final_non_county_dat <- non_county_dat |>
 ) 
 ```
 
-Then, I will write functions to do above pieces and call it all
+### Then, I will write functions to do above pieces and call it all
 
 Function does steps 1 & 2
+
 ```{r}
 function_for_step_1_2 <- function(dat, default_var_name = "number") {
   result_from_step2 <- dat |> 
@@ -88,15 +97,17 @@ function_for_step_1_2 <- function(dat, default_var_name = "number") {
 ```
 
 Function for step 3
+
 ```{r}
 function_for_step_3 <- function(result_from_step2) {
   result_from_step3 <- result_from_step2 |>
     separate_wider_position(enrollment, c(measurement = 3, 4, year = 2, 1))|>
-    mutate(year = as.numeric(year) + 1900)
+    mutate(year = ifelse(as.numeric(year) < 10, as.numeric(year) + 2000, as.numeric(year) + 1900))
 }
 ```
 
 Function for step 5
+
 ```{r}
 function_for_step_5 <- function(county_dat){
   county_dat |>
@@ -106,6 +117,7 @@ function_for_step_5 <- function(county_dat){
 ```
 
 Function for step 6
+
 ```{r}
 function_for_step_6 <- function(non_county_dat){
   non_county_dat |>
@@ -126,6 +138,7 @@ function_for_step_6 <- function(non_county_dat){
 ```
 
 Function for steps 4, 5, 6
+
 ```{r}
 function_for_steps4_5_6 <- function(result_from_step3){
   county_dat <- result_from_step3 |>
@@ -142,6 +155,7 @@ function_for_steps4_5_6 <- function(result_from_step3){
 ```
 
 Create a wrapper function
+
 ```{r}
 my_wrapper <- function(url, default_var_name = "number"){
   result <- read_csv(url, col_names = TRUE) |>
@@ -152,22 +166,73 @@ return(result)
 }
 ```
 
-Then, we call the wrapper function twice to read in and parse two data sets.
+### Then, we call the wrapper function twice to read in and parse two data sets.
+
 ```{r}
 dat1 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv", default_var_name)
 
 dat2 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv", default_var_name)
 ```
-Then, we write a combine data set function
+
+### Then, we write a combine function to combine the reuslts from two data sets.
+
 ```{r}
 my_combine <- function(x, y){
   county_dat <- bind_rows(x[1], y[1])
   non_county_dat <- bind_rows(x[2], y[2])
   return(list(county_dat, non_county_dat))
 }
+
+Final_dat <- my_combine(x=dat1, y=dat2)
 ```
 
-Then, we call the combine funciton to combine the reuslts from two data sets.
+## Data Sumarizing
+
+
 ```{r}
-Final_dat <- my_combine(x=dat1, y=dat2)
+plot.state <- function(df, var_name = "number"){
+  df$year <- as.factor(df$year)
+  ggplot(data = df |>
+           filter(division != "ERROR") |>
+           group_by(year, division) |>
+           summarize(Enrollment_mean = mean(get(var_name))), 
+         aes(x = year, y = Enrollment_mean, group = division, color = division)) +
+           geom_line() +
+           geom_point() +
+           labs(x = "Year")
+}
+
+```
+
+
+```{r}
+plot.county <- function(df, Interest_state = "NC", var_name = "number", group = "Top", n = 5){
+  df$year <- as.factor(df$year)
+  
+  ranking <- df |> 
+    filter(state == Interest_state) |>
+    group_by(area_name) |>
+    summarize(county_mean = mean(get(var_name))) |>
+    arrange(desc(county_mean))
+      
+  if (group == "Top") {
+    selected_area_name <- ranking$area_name[1:n]
+  } else if (group == "Bottom") {
+    selected_area_name <- tail(ranking$area_name, n)
+  }
+    
+  ggplot(data = df |>
+           filter(area_name %in% selected_area_name) |>
+           group_by(year, area_name) |>
+           summarize(Enrollment_mean = mean(get(var_name))), 
+         aes(x = year, y = Enrollment_mean, group = area_name, color = area_name)) +
+           geom_line() +
+           geom_point() +
+           labs(x = "Year")
+}
+
+```
+
+```{r}
+
 ```
