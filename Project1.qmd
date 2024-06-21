@@ -166,7 +166,6 @@ return(result)
 }
 ```
 
-
 ### Then, we write a combine function to combine the reuslts from two data sets.
 
 ```{r}
@@ -247,6 +246,7 @@ Final_dat <- my_combine(x=dat1, y=dat2)
 ```{r}
 plot.state(df = Final_dat[[2]], var_name = "number")
 ```
+
 ### Use the plot function on the county data frame
 
 Once specifying the state to be “NC”, the group being the top, the number looked at being 20
@@ -254,16 +254,19 @@ Once specifying the state to be “NC”, the group being the top, the number lo
 ```{r}
 plot.county(df=Final_dat[[1]], Interest_state = "NC", var_name = "number", group = "Top", n = 20)
 ```
+
 Once specifying the state to be “SC”, the group being the bottom, the number looked at being 7
 
 ```{r}
 plot.county(df=Final_dat[[1]], Interest_state = "SC", var_name = "number", group = "Bottom", n = 7)
 ```
+
 Once without specifying anything (defaults used)
 
 ```{r}
 plot.county(df=Final_dat[[1]])
 ```
+
 Once specifying the state to be “PA”, the group being the top, the number looked at being 8
 
 ```{r}
@@ -303,19 +306,21 @@ Once specifying the state to be “CA”, the group being the top, the number lo
 ```{r}
 plot.county(df=Final_dat2[[1]], Interest_state = "CA", var_name = "number", group = "Top", n = 15)
 ```
+
 Once specifying the state to be “TX”, the group being the top, the number looked at being 4
 
 ```{r}
 plot.county(df=Final_dat2[[1]], Interest_state = "TX", var_name = "number", group = "Top", n = 4)
 ```
+
 Once without specifying anything (defaults used)
 
 ```{r}
 plot.county(df=Final_dat2[[1]])
 ```
+
 Once specifying the state to be “NY”, the group being the top, the number looked at being 10
 
 ```{r}
 plot.county(df=Final_dat2[[1]], Interest_state = "NY", var_name = "number", group = "Top", n = 10)
 ```
-
